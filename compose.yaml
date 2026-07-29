@@ -1,0 +1,87 @@
+name: devops-ci-cd
+
+services:
+  app:
+    build:
+      context: .
+      target: production
+
+    image: health-api:compose
+
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+
+    ports:
+      - "${PORT:-3000}:${PORT:-3000}"
+
+    networks:
+      - ci-network
+
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:26.6.0.123539-community
+
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/${SONAR_DB_NAME}
+      SONAR_JDBC_USERNAME: ${SONAR_DB_USER}
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD}
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    ports:
+      - "9000:9000"
+
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
+    networks:
+      - ci-network
+
+    ulimits:
+      nofile:
+        soft: 131072
+        hard: 131072
+      nproc: 8192
+
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-alpine
+
+    environment:
+      POSTGRES_DB: ${SONAR_DB_NAME}
+      POSTGRES_USER: ${SONAR_DB_USER}
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD}
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${SONAR_DB_USER} -d ${SONAR_DB_NAME}
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - ci-network
+
+    restart: unless-stopped
+
+networks:
+  ci-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
