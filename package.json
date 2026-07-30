@@ -1,13 +1,11 @@
 {
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@sonar/scan": "^4.4.0",
-    "eslint": "^10.8.0",
-    "globals": "^17.8.0",
-    "jest": "^30.4.2",
-    "supertest": "^7.2.2"
-  },
+  "name": "devops-ci-cd-health-api",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Node.js health API with Docker, SonarQube, Trivy and GitHub Actions",
+  "main": "src/server.js",
   "scripts": {
+    "start": "node src/server.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
@@ -16,5 +14,13 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@sonar/scan": "^4.4.0",
+    "eslint": "^10.8.0",
+    "globals": "^17.8.0",
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }

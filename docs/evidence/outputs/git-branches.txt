@@ -1,8 +1,9 @@
-* docs/readme-evidence
+  docs/readme-evidence
   feature/docker-compose
   feature/docker-multistage
   feature/health-api
   feature/sonarqube-analysis
+* fix/final-submission-readiness
   fix/restore-health-api
   main
   test/health-api
@@ -11,6 +12,7 @@
   remotes/origin/ci/ghcr-publishing
   remotes/origin/ci/github-actions
   remotes/origin/ci/sonarqube-integration
+  remotes/origin/docs/readme-evidence
   remotes/origin/feature/docker-compose
   remotes/origin/feature/docker-multistage
   remotes/origin/feature/health-api

@@ -1,6 +1,11 @@
-* 0987492 (HEAD -> docs/readme-evidence) ci: add Trivy vulnerability gate
-* 00207c4 build: use required Docker Compose filename
-*   027d4b6 (tag: v1.0.0, origin/main, origin/HEAD, main) Merge pull request #12 from ahsanjamil583/ci/ghcr-publishing
+*   9da726b (HEAD -> fix/final-submission-readiness, tag: v1.0.2, tag: v1.0.1, origin/main, origin/HEAD, main) Merge pull request #13 from ahsanjamil583/docs/readme-evidence
+|\  
+| * c017666 (origin/docs/readme-evidence, docs/readme-evidence) fix: remove vulnerable package managers from runtime image
+| * deaa984 docs: add setup instructions and project evidence
+| * 0987492 ci: add Trivy vulnerability gate
+| * 00207c4 build: use required Docker Compose filename
+|/  
+*   027d4b6 (tag: v1.0.0) Merge pull request #12 from ahsanjamil583/ci/ghcr-publishing
 |\  
 | * 280c027 (origin/ci/ghcr-publishing) ci: publish release images to GHCR
 |/  
@@ -64,3 +69,6 @@
 |\ \  
 | |/  
 |/|   
+| * 9b6dc24 (origin/feature/health-api, feature/health-api) feat: add health endpoint
+|/  
+* 61529d8 chore: initialize repository
