@@ -244,7 +244,69 @@ jobs:
           echo "Container cleanup completed."
 
   # =================================================
-  # Job 3: SonarQube analysis and Quality Gate
+  # Job 3: Scan production image with Trivy
+  # =================================================
+  trivy:
+    name: Trivy vulnerability scan
+
+    needs:
+      - docker
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 20
+
+    env:
+      IMAGE_NAME: health-api:${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build production image for security scan
+        run: |
+          docker build \
+            --target production \
+            --tag "$IMAGE_NAME" \
+            .
+
+      - name: Create Trivy report directory
+        run: mkdir -p reports/trivy
+
+      - name: Generate full Trivy report
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}
+          scanners: vuln
+          format: table
+          output: reports/trivy/trivy-full.txt
+          exit-code: "0"
+
+      - name: Fail on critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ env.IMAGE_NAME }}
+          scanners: vuln
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          skip-setup-trivy: true
+
+      - name: Upload Trivy report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: trivy-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/trivy/
+          if-no-files-found: warn
+          retention-days: 7
+
+
+  # =================================================
+  # Job 4: SonarQube analysis and Quality Gate
   # =================================================
   sonarqube:
     name: SonarQube quality gate
@@ -471,7 +533,7 @@ jobs:
 
 
   # =================================================
-  # Job 4: Publish validated image to GHCR
+  # Job 5: Publish validated image to GHCR
   # =================================================
   publish:
     name: Publish image to GHCR
@@ -480,6 +542,7 @@ jobs:
       - validate
       - docker
       - sonarqube
+      - trivy
 
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
