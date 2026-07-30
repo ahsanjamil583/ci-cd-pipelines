@@ -243,7 +243,234 @@ jobs:
           echo "Container cleanup completed."
 
   # =================================================
-  # Job 3: Version-tag condition
+  # Job 3: SonarQube analysis and Quality Gate
+  # =================================================
+  sonarqube:
+    name: SonarQube quality gate
+
+    needs:
+      - docker
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    env:
+      SONAR_HOST_URL: http://127.0.0.1:9000
+      SONAR_PORT: "9000"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --runInBand
+
+      - name: Verify LCOV coverage report
+        run: |
+          test -f coverage/lcov.info
+          echo "Coverage report is ready for SonarQube."
+
+      - name: Configure SonarQube host limits
+        run: |
+          sudo sysctl -w vm.max_map_count=524288
+          sudo sysctl -w fs.file-max=131072
+
+          sysctl vm.max_map_count
+          sysctl fs.file-max
+
+      - name: Start PostgreSQL and SonarQube
+        run: |
+          SONAR_DB_PASSWORD="$(openssl rand -hex 24)"
+
+          echo "::add-mask::$SONAR_DB_PASSWORD"
+          echo "SONAR_DB_PASSWORD=$SONAR_DB_PASSWORD" >> "$GITHUB_ENV"
+
+          export SONAR_DB_PASSWORD
+
+          docker compose \
+            -f compose.ci.yaml \
+            up -d db sonarqube
+
+          docker compose \
+            -f compose.ci.yaml \
+            ps
+
+      - name: Wait until SonarQube is ready
+        run: |
+          echo "Waiting for SonarQube at $SONAR_HOST_URL"
+
+          for attempt in $(seq 1 120); do
+            RESPONSE="$(
+              curl \
+                --fail \
+                --silent \
+                "$SONAR_HOST_URL/api/system/status" \
+                2>/dev/null || true
+            )"
+
+            if echo "$RESPONSE" | grep -q '"status":"UP"'; then
+              echo "SonarQube is ready."
+              echo "$RESPONSE"
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}/120: SonarQube is not ready yet."
+            sleep 5
+          done
+
+          echo "SonarQube did not become ready within 10 minutes."
+          exit 1
+
+      - name: Generate temporary SonarQube token
+        run: |
+          TOKEN_RESPONSE="$(
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --user admin:admin \
+              --request POST \
+              --data-urlencode \
+                "name=github-actions-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+              "$SONAR_HOST_URL/api/user_tokens/generate"
+          )"
+
+          SONAR_TOKEN="$(
+            printf '%s' "$TOKEN_RESPONSE" |
+              node -e '
+                const fs = require("fs");
+                const response = JSON.parse(
+                  fs.readFileSync(0, "utf8"),
+                );
+
+                if (!response.token) {
+                  console.error("SonarQube token was not returned.");
+                  process.exit(1);
+                }
+
+                process.stdout.write(response.token);
+              '
+          )"
+
+          test -n "$SONAR_TOKEN"
+
+          echo "::add-mask::$SONAR_TOKEN"
+          echo "SONAR_TOKEN=$SONAR_TOKEN" >> "$GITHUB_ENV"
+
+          echo "Temporary SonarQube token generated securely."
+
+      - name: Create SonarQube project
+        run: |
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --user "${SONAR_TOKEN}:" \
+            --request POST \
+            --data-urlencode \
+              "project=devops-ci-cd-health-api" \
+            --data-urlencode \
+              "name=DevOps CI/CD Health API" \
+            "$SONAR_HOST_URL/api/projects/create"
+
+          echo
+          echo "SonarQube project created."
+
+      - name: Run SonarQube analysis
+        run: npm run sonar
+
+      - name: Save Quality Gate result
+        if: ${{ always() }}
+        run: |
+          mkdir -p reports/sonar
+
+          if [ -n "${SONAR_TOKEN:-}" ]; then
+            curl \
+              --fail \
+              --silent \
+              --show-error \
+              --user "${SONAR_TOKEN}:" \
+              "$SONAR_HOST_URL/api/qualitygates/project_status?projectKey=devops-ci-cd-health-api" \
+              > reports/sonar/quality-gate.json \
+              || true
+          fi
+
+          if [ -f reports/sonar/quality-gate.json ]; then
+            cat reports/sonar/quality-gate.json
+            echo
+          fi
+
+      - name: Collect SonarQube diagnostics
+        if: ${{ always() }}
+        run: |
+          mkdir -p reports/sonar
+
+          docker compose \
+            -f compose.ci.yaml \
+            ps -a \
+            > reports/sonar/compose-status.txt \
+            2>&1 || true
+
+          docker compose \
+            -f compose.ci.yaml \
+            logs sonarqube \
+            > reports/sonar/sonarqube.log \
+            2>&1 || true
+
+          docker compose \
+            -f compose.ci.yaml \
+            logs db \
+            > reports/sonar/postgres.log \
+            2>&1 || true
+
+      - name: Show SonarQube logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "========== SonarQube logs =========="
+
+          docker compose \
+            -f compose.ci.yaml \
+            logs --tail 200 sonarqube \
+            || true
+
+          echo "========== PostgreSQL logs =========="
+
+          docker compose \
+            -f compose.ci.yaml \
+            logs --tail 100 db \
+            || true
+
+      - name: Upload SonarQube reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonar-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/sonar/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Stop SonarQube stack
+        if: ${{ always() }}
+        run: |
+          docker compose \
+            -f compose.ci.yaml \
+            down --volumes --remove-orphans
+
+          echo "Temporary SonarQube stack removed."
+
+
+  # =================================================
+  # Job 4: Version-tag condition
   # =================================================
   release_preview:
     name: Release condition check
