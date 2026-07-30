@@ -1,0 +1,66 @@
+* 0987492 (HEAD -> docs/readme-evidence) ci: add Trivy vulnerability gate
+* 00207c4 build: use required Docker Compose filename
+*   027d4b6 (tag: v1.0.0, origin/main, origin/HEAD, main) Merge pull request #12 from ahsanjamil583/ci/ghcr-publishing
+|\  
+| * 280c027 (origin/ci/ghcr-publishing) ci: publish release images to GHCR
+|/  
+*   48f47f7 Merge pull request #11 from ahsanjamil583/ci/sonarqube-integration
+|\  
+| * 62e2396 (origin/ci/sonarqube-integration) ci: integrate SonarQube quality gate
+|/  
+*   c94b269 Merge pull request #10 from ahsanjamil583/ci/docker-validation
+|\  
+| * 9d3dd62 (origin/ci/docker-validation) ci: add Docker build and health verification
+|/  
+*   524e0b5 Merge pull request #9 from ahsanjamil583/ci/github-actions
+|\  
+| * 4b2ff54 (origin/ci/github-actions) ci: add GitHub Actions validation workflow
+|/  
+*   60b6391 Merge pull request #8 from ahsanjamil583/feature/trivy-scanning
+|\  
+| * 8c2930f (origin/feature/trivy-scanning) security: add Trivy vulnerability report
+|/  
+*   e74abf1 Merge pull request #6 from ahsanjamil583/feature/sonarqube-analysis
+|\  
+| | *   248e41a (refs/stash) On main: wip: SonarQube configuration
+| |/|\  
+|/| | | 
+| | | * 522dc1f untracked files on main: ac52117 Merge pull request #7 from ahsanjamil583/feature/docker-compose
+| | * 79b7acb index on main: ac52117 Merge pull request #7 from ahsanjamil583/feature/docker-compose
+| |/  
+|/|   
+| | * 4cfd6ca (origin/feature/sonarqube-analysis, feature/sonarqube-analysis) Merge branch 'main' into feature/sonarqube-analysis
+| |/| 
+| |/  
+|/|   
+* |   ac52117 Merge pull request #7 from ahsanjamil583/feature/docker-compose
+|\ \  
+| | * 02d5ada chore: configure SonarQube analysis
+| | | * fb2f7ac (origin/feature/docker-compose, feature/docker-compose) merge: sync main into docker compose branch
+| | |/| 
+| |/|/  
+| |/|   
+|/| |   
+* | |   7ac0270 Merge pull request #5 from ahsanjamil583/feature/docker-multistage
+|\ \ \  
+| |_|/  
+|/| |   
+| * | e893b3c (origin/feature/docker-multistage, feature/docker-multistage) build: add multi-stage Dockerfile
+|/ /  
+| * b215413 build: add Docker Compose stack
+|/  
+*   0c11b09 Merge pull request #2 from ahsanjamil583/test/health-api
+|\  
+| * 3b7e96c (origin/test/health-api, test/health-api) chore: configure ESLint
+| * ab83bab test: add health endpoint test
+| | * 94762a4 (origin/fix/restore-health-api, fix/restore-health-api) fix: restore health check endpoint
+| |/  
+|/|   
+* |   3d38ffb Merge pull request #3 from ahsanjamil583/revert-1-feature/health-api
+|\ \  
+| * | 5e252c8 Revert "Add health check endpoint"
+|/ /  
+* |   af2daf0 Merge pull request #1 from ahsanjamil583/feature/health-api
+|\ \  
+| |/  
+|/|   

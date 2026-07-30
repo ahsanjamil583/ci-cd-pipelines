@@ -1,0 +1,10 @@
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 20
+ETag: W/"14-42nwGXkfHCFZ+m0t1l+wwUXCzf4"
+Date: Thu, 30 Jul 2026 18:56:15 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"healthy"}

@@ -1,0 +1,2 @@
+Container=health-api-evidence Status=Up 31 seconds (healthy) Ports=0.0.0.0:3100->3000/tcp, [::]:3100->3000/tcp
+Running=true Health=healthy User=node
