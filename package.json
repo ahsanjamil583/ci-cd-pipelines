@@ -1,6 +1,6 @@
 {
   "name": "devops-ci-cd-health-api",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "private": true,
   "description": "Node.js health API with Docker, SonarQube, Trivy and GitHub Actions",
   "main": "src/server.js",

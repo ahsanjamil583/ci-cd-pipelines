@@ -60,7 +60,7 @@ flowchart TD
 |---|---:|---:|
 | Pull Request to `main` | Yes | No |
 | Push or merge to `main` | Yes | No |
-| Push version tag such as `v1.0.1` | Yes | Yes, after all checks pass |
+| Push version tag such as `v1.0.3` | Yes | Yes, after all checks pass |
 
 ## Technology Stack
 
@@ -466,7 +466,7 @@ trivy image \
   --scanners vuln \
   --severity CRITICAL \
   --exit-code 1 \
-  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.1
+  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.3
 ```
 
 ## GitHub Actions
@@ -521,7 +521,7 @@ The pipeline contains five jobs:
 
 ### 5. Publish Image to GHCR
 
-This job runs only for semantic version tags such as `v1.0.1`.
+This job runs only for semantic version tags such as `v1.0.3`.
 
 Publishing requires all previous jobs to pass:
 
@@ -584,14 +584,14 @@ Publishing occurs only after pushing a version tag:
 git switch main
 git pull origin main
 
-git tag -a v1.0.1 -m "Release v1.0.1"
-git push origin v1.0.1
+git tag -a v1.0.3 -m "Release v1.0.3"
+git push origin v1.0.3
 ```
 
 The workflow publishes two references to the same image:
 
 ```text
-ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.1
+ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.3
 ghcr.io/ahsanjamil583/ci-cd-pipelines:<full-commit-sha>
 ```
 
@@ -599,7 +599,7 @@ Pull the versioned image:
 
 ```bash
 docker pull \
-  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.1
+  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.3
 ```
 
 Run it:
@@ -609,7 +609,7 @@ docker run \
   --detach \
   --name health-api-release \
   --publish 3100:3000 \
-  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.1
+  ghcr.io/ahsanjamil583/ci-cd-pipelines:v1.0.3
 ```
 
 Verify:
@@ -762,7 +762,7 @@ Publishing is intentionally skipped for:
 - Normal branch pushes
 - Pushes to `main`
 
-It runs only when a version tag such as `v1.0.1` is pushed.
+It runs only when a version tag such as `v1.0.3` is pushed.
 
 ## Security Notes
 
