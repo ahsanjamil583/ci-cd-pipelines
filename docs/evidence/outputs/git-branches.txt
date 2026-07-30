@@ -1,0 +1,21 @@
+* docs/readme-evidence
+  feature/docker-compose
+  feature/docker-multistage
+  feature/health-api
+  feature/sonarqube-analysis
+  fix/restore-health-api
+  main
+  test/health-api
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/ci/docker-validation
+  remotes/origin/ci/ghcr-publishing
+  remotes/origin/ci/github-actions
+  remotes/origin/ci/sonarqube-integration
+  remotes/origin/feature/docker-compose
+  remotes/origin/feature/docker-multistage
+  remotes/origin/feature/health-api
+  remotes/origin/feature/sonarqube-analysis
+  remotes/origin/feature/trivy-scanning
+  remotes/origin/fix/restore-health-api
+  remotes/origin/main
+  remotes/origin/test/health-api
