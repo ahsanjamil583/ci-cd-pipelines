@@ -22,6 +22,9 @@ env:
   CI: "true"
 
 jobs:
+  # =================================================
+  # Job 1: Validate Node.js source code
+  # =================================================
   validate:
     name: Lint and test
 
@@ -62,16 +65,192 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-${{ github.run_id }}
+          name: coverage-${{ github.run_id }}-${{ github.run_attempt }}
           path: coverage/
           if-no-files-found: warn
           retention-days: 7
 
+  # =================================================
+  # Job 2: Build and verify Docker container
+  # =================================================
+  docker:
+    name: Build and verify container
+
+    needs:
+      - validate
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 20
+
+    env:
+      IMAGE_NAME: health-api:${{ github.sha }}
+      CONTAINER_NAME: health-api-ci
+      HOST_PORT: "3001"
+      HEALTH_URL: http://127.0.0.1:3001/health
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js for JSON verification
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Display Docker information
+        run: |
+          docker --version
+          docker info
+
+      - name: Build production Docker image
+        run: |
+          docker build \
+            --target production \
+            --tag "$IMAGE_NAME" \
+            .
+
+      - name: Verify Docker image exists
+        run: |
+          docker image inspect "$IMAGE_NAME" > /dev/null
+          echo "Docker image created: $IMAGE_NAME"
+
+      - name: Run application container
+        run: |
+          docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+
+          docker run \
+            --detach \
+            --name "$CONTAINER_NAME" \
+            --publish "127.0.0.1:${HOST_PORT}:3000" \
+            "$IMAGE_NAME"
+
+          docker ps \
+            --filter "name=$CONTAINER_NAME"
+
+      - name: Wait for application readiness
+        run: |
+          echo "Waiting for application at $HEALTH_URL"
+
+          for attempt in $(seq 1 30); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              "$HEALTH_URL" \
+              --output /tmp/health-response.json
+            then
+              echo "Application responded successfully."
+              cat /tmp/health-response.json
+              exit 0
+            fi
+
+            if ! docker ps \
+              --format '{{.Names}}' \
+              | grep -qx "$CONTAINER_NAME"
+            then
+              echo "Container stopped before becoming ready."
+              exit 1
+            fi
+
+            echo "Attempt ${attempt}/30 failed. Retrying in 2 seconds..."
+            sleep 2
+          done
+
+          echo "Application did not become ready within 60 seconds."
+          exit 1
+
+      - name: Verify exact health response
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const responsePath = "/tmp/health-response.json";
+          const rawResponse = fs.readFileSync(responsePath, "utf8");
+          const body = JSON.parse(rawResponse);
+
+          const keys = Object.keys(body);
+          const isExactResponse =
+            keys.length === 1 &&
+            keys[0] === "status" &&
+            body.status === "healthy";
+
+          if (!isExactResponse) {
+            console.error(
+              `Unexpected health response: ${JSON.stringify(body)}`,
+            );
+            process.exit(1);
+          }
+
+          console.log(
+            `Health response verified: ${JSON.stringify(body)}`,
+          );
+          NODE
+
+      - name: Display container status
+        run: |
+          docker ps \
+            --filter "name=$CONTAINER_NAME" \
+            --format \
+            'Container={{.Names}} Status={{.Status}} Ports={{.Ports}}'
+
+          docker inspect \
+            --format='Running={{.State.Running}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}not-configured{{end}}' \
+            "$CONTAINER_NAME"
+
+      - name: Collect Docker diagnostics on failure
+        if: ${{ failure() }}
+        run: |
+          mkdir -p reports/docker
+
+          docker ps -a \
+            > reports/docker/docker-ps.txt
+
+          docker logs "$CONTAINER_NAME" \
+            > reports/docker/container.log \
+            2>&1 || true
+
+          docker inspect "$CONTAINER_NAME" \
+            > reports/docker/container-inspect.json \
+            2>&1 || true
+
+          echo "Docker diagnostics collected."
+
+      - name: Show container logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "========== Container logs =========="
+
+          docker logs "$CONTAINER_NAME" || true
+
+          echo "========== Container status =========="
+
+          docker ps -a || true
+
+      - name: Upload Docker diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/docker/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Cleanup Docker container
+        if: ${{ always() }}
+        run: |
+          docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+          echo "Container cleanup completed."
+
+  # =================================================
+  # Job 3: Version-tag condition
+  # =================================================
   release_preview:
     name: Release condition check
 
     needs:
       - validate
+      - docker
 
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
@@ -82,5 +261,6 @@ jobs:
         run: |
           echo "Version tag: $GITHUB_REF_NAME"
           echo "Commit SHA: $GITHUB_SHA"
-          echo "Validation passed."
-          echo "Docker publishing will be added in the GHCR phase."
+          echo "Node validation passed."
+          echo "Docker validation passed."
+          echo "Image publishing will be added in the GHCR phase."
